@@ -1,58 +1,58 @@
 import numpy as np
-
+import math as m
 
 
 
 
 class FluidCube:
     def __init__(self, size, dt, diff, visc):
-        self._size = size                           #length in one dimension
-        self._dt = dt                               #timestep
-        self._diff = diff                           #diffusion constant
-        self._visc = visc                           #viscosity
-        self._s = np.zeros((size,size,size))        #unsure
-        self._dens = np.zeros((size,size,size))     #density
-        self._vx = np.zeros((size,size,size))       #velocity in x
-        self._vy = np.zeros((size,size,size))       #velocity in y
-        self._vz = np.zeros((size,size,size))       #velocity in z
-        self._vx0 = np.zeros((size,size,size))      #previous velocity in x
-        self._vy0 = np.zeros((size,size,size))      #previous velocity in y
-        self._vz0 = np.zeros((size,size,size))      #previous velocity in z
+        self.size = size                           #length in one dimension
+        self.dt = dt                               #timestep
+        self.diff = diff                           #diffusion constant
+        self.visc = visc                           #viscosity
+        self.s = np.zeros((size,size,size))        #unsure
+        self.dens = np.zeros((size,size,size))     #density
+        self.vx = np.zeros((size,size,size))       #velocity in x
+        self.vy = np.zeros((size,size,size))       #velocity in y
+        self.vz = np.zeros((size,size,size))       #velocity in z
+        self.vx0 = np.zeros((size,size,size))      #previous velocity in x
+        self.vy0 = np.zeros((size,size,size))      #previous velocity in y
+        self.vz0 = np.zeros((size,size,size))      #previous velocity in z
     def set_velocities(self, vx, vy, vz, x, y, z):
-        self._vx0[x,y,z] = self._vx[x,y,z]
-        self._vy0[x,y,z] = self._vy[x,y,z]
-        self._vz0[x,y,z] = self._vz[x,y,z]
-        self._vx[x,y,z] += vx
-        self._vy[x,y,z] += vy
-        self._vz[x,y,z] += vz
+        self.vx0[x,y,z] = self._vx[x,y,z]
+        self.vy0[x,y,z] = self._vy[x,y,z]
+        self.vz0[x,y,z] = self._vz[x,y,z]
+        self.vx[x,y,z] += vx
+        self.vy[x,y,z] += vy
+        self.vz[x,y,z] += vz
     def set_density(self, x, y, z, dens):
-        self._dens+= dens[x,y,z]
+        self.dens+= dens[x,y,z]
     
-def setting_steps(cube):
-    size = cube._size
-    dt = cube._dt
-    diffusion = cube._diff
-    visc = cube._visc
-    s = cube._s
-    dens = cube._dens
-    vx = cube._vx
-    vy = cube._vy
-    vz = cube._vz
-    vx0 = cube._vx0
-    vy0 = cube._vy0
-    vz0 = cube._vz0
+def step(cube):
+    size = cube.size
+    dt = cube.dt
+    diffusion = cube.diff
+    visc = cube.visc
+    s = cube.s
+    dens = cube.dens
+    vx = cube.vx
+    vy = cube.vy
+    vz = cube.vz
+    vx0 = cube.vx0
+    vy0 = cube.vy0
+    vz0 = cube.vz0
 
-    vx = diffuse(1, vx0, vx, visc, dt, 4, size)
-    vy = diffuse(2, vy0, vy, visc, dt, 4, size)
-    vz = diffuse(3, vz0, vz, visc, dt, 4, size)
+    diffuse(1, vx0, vx, visc, dt, 4, size)
+    diffuse(2, vy0, vy, visc, dt, 4, size)
+    diffuse(3, vz0, vz, visc, dt, 4, size)
 
-    vx, vy, vz = project(vx0, vy0, vz0, vx, vy, 4, size)
+    project(vx0, vy0, vz0, vx, vy, 4, size)
 
-    vx = advect(1, vx, vx0, vx0, vy0, vz0, dt, size)
-    vy = advect(1, vy, vy0, vx0, vy0, vz0, dt, size)
-    vz = advect(1, vz, vz0, vx0, vy0, vz0, dt, size)
+    advect(1, vx, vx0, vx0, vy0, vz0, dt, size)
+    advect(1, vy, vy0, vx0, vy0, vz0, dt, size)
+    advect(1, vz, vz0, vx0, vy0, vz0, dt, size)
 
-    vx, vy, vz = project(vx0, vy0, vz0, vx, vy, 4, size)
+    project(vx0, vy0, vz0, vx, vy, 4, size)
 
     diffuse(0, s, dens, diffusion, dt, 4, size)
     advect(0, dens, s, vx, vy, vz, dt, size)
@@ -90,7 +90,6 @@ def set_bnd(b, x, N):
     x[N-1,N-1,0] = (x[N-2,N-1,0]+ x[N-1,N-2,0]+ x[N-1,N-1,1])/3
     x[N-1,N-1,N-1] = (x[N-2,N-1,N-1]+ x[N-1,N-2,N-1]+ x[N-1,N-1,N-2])/3
     x[N-1,0,N-1] = (x[N-2,0,N-1]+ x[N-1,1,N-1]+ x[N-1,0,N-2])/3
-    return x
 
 def lin_solve(b, x, x0, a, c, iter, N):
     for k in range(iter):
@@ -98,13 +97,76 @@ def lin_solve(b, x, x0, a, c, iter, N):
             for j in range(1,N-1):
                 for i in range(1, N-1):
                     x[i,j,m] = (x0[i, j, m]+ a*(x[i+1, j, m]+x[i-1, j, m]+x[i, j-1, m]+ x[i, j-1, m]+x[i, j, m+1]+x[i, j, m-1]))/c 
-        x = set_bnd(b, x, N)
-    return x
+        set_bnd(b, x, N)
+    
     
 
 def diffuse(b, x, x0, diff, dt, iter, N):
     a = dt * diff* (N-2) *(N-2)
-    return lin_solve(b, x, x0, a, 1 + 6 *a, iter, N)
+    lin_solve(b, x, x0, a, 1 + 6 *a, iter, N)
+
+def project(velocX, velocY, velocZ, p, div, iter, N):
+    for k in range(N-1):
+        for j in range(N-1):
+            for i in range(N-1):
+                div[i, j, k] = -0.5*(velocX[i+1, j, k]-velocX[i-1, j, k] + velocY[i, j+1, k] - velocY[i, j-1, k] + velocZ[i, j, k+1] - velocZ[i, j, k-1])/N
+                p[i,j,k] = 0
+    set_bnd(0, div, N)
+    set_bnd(0, p, N)
+    lin_solve(0, p, div, 1, 6, iter, N) #Do you have to return this for numpy arrays or are the local operations on them saved? let's see
+    for k in range(N-1):
+        for j in range(N-1):
+            for i in range(N-1):
+                velocX[i, j, k] = -0.5*(p[i+1, j, k]-p[i-1,j,k])
+                velocY[i, j, k] = -0.5*(p[i, j+1, k]-p[i,j+1,k])
+                velocZ[i, j, k] = -0.5*(p[i, j, k+1]-p[i,j,k-1])
+    set_bnd(1, velocX, N)
+    set_bnd(2, velocY, N)
+    set_bnd(3, velocZ, N)
+
+def advect(b, d, d0, velocX, velocY, velocZ, dt, N):
+    dtx = dt *(N-2)
+    dty = dt *(N-2)
+    dtz = dt *(N-2)
+
+    for k in range(N-1):
+        for j in range(N-1):
+            for i in range(N-1):
+                tmp1 = dtx * velocX[i, j, k]
+                tmp2 = dty * velocY[i, j, k]
+                tmp3 = dtx * velocZ[i, j, k]
+                x = i - tmp1
+                y = j - tmp2
+                z = k - tmp3
+                if x <0.5:
+                    x = 0.5
+                if x > (N + 0.5):
+                    x = N + 0.5
+                i0 = m.floor(x, out=int)
+                i1 = i0 + 1
+                if y <0.5:
+                    y = 0.5
+                if y > (N + 0.5):
+                    y = N + 0.5
+                j0 = m.floor(y)
+                j1 = j0 + 1
+                if z <0.5:
+                    z = 0.5
+                if z > (N + 0.5):
+                    z = N + 0.5
+                k0 = m.floor(z)
+                k1 = k0 + 1
+
+                s1 = x - i0
+                s0 = 1 - s1
+                t1 = y- j0
+                t0 = 1 - t1
+                u1 = z -k0
+                u0 = 1 - u1
+                # double check this
+                d[i,j,k] = s0*(t0*(u0*d0[i0, j0, k0] + u1 * d0[i1, j1, k1]) + (t1* (u0 * d0 [i0, j1, k0]+ u1* d0[i0, j1, k1]))) +s1 * (t0 *(u0* d0[i1, j0, k0] + u1* d0[i1, j0, k1])+ t1 * (u0*d0[i1,j1,k] + u1*d0[i1,j1,k1]))
+
+                
 
 
 def main():
@@ -112,3 +174,8 @@ def main():
     viscosity = 10 #kg/m*s (viscosity of cream)
     diffusion = 10**-12 #diffusion constant, m^2/s
     dt = 0.001 #seconds
+    fluid = FluidCube(size, dt, diffusion, viscosity)
+    step(fluid)
+
+if __name__=='__main__':
+    main()
